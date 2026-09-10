@@ -1,0 +1,6 @@
+{
+  "name": "hunter-system-native-build",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {"postinstall": "chmod +x gradlew", "test": "cd android && ./gradlew testDebugUnitTest"}
+}

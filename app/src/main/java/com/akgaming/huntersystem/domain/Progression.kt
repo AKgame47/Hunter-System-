@@ -1,0 +1,19 @@
+package com.akgaming.huntersystem.domain
+
+enum class HunterRank { E, D, C, B, A, S }
+data class Hunter(val level:Int=27,val xp:Int=340,val rank:HunterRank=HunterRank.B,val streak:Int=23,val completedQuests:Int=126)
+data class Objective(val name:String,val target:String,val complete:Boolean=false)
+data class Quest(val title:String="PUSH YOUR LIMITS",val rewardXp:Int=120,val objectives:List<Objective> = listOf(Objective("Push-ups","3 sets"),Objective("Squats","3 sets"),Objective("Plank","30 sec"),Objective("Lunges","3 sets")))
+object Progression {
+    const val XP_PER_LEVEL=500
+    fun awardQuest(hunter:Hunter,reward:Int,verifiedRatio:Double):Hunter {
+        require(reward>=0) { "Reward cannot be negative" }
+        val ratio=verifiedRatio.coerceIn(0.0,1.0)
+        val eligible=(reward*(0.6+0.4*ratio)).toInt()
+        val total=hunter.xp+eligible
+        val level=hunter.level+(total/XP_PER_LEVEL)
+        return hunter.copy(level=level,xp=total%XP_PER_LEVEL,rank=rankFor(level),streak=hunter.streak+1,completedQuests=hunter.completedQuests+1)
+    }
+    fun progress(done:Int,total:Int)=if(total<=0) 0f else (done.toFloat()/total).coerceIn(0f,1f)
+    fun rankFor(level:Int)=when { level>=50->HunterRank.S;level>=35->HunterRank.A;level>=25->HunterRank.B;level>=15->HunterRank.C;level>=5->HunterRank.D;else->HunterRank.E }
+}
