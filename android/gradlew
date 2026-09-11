@@ -1,10 +1,16 @@
 #!/bin/sh
 set -eu
-APP_HOME=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-JAR="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
-if [ ! -f "$JAR" ]; then
-  mkdir -p "$(dirname "$JAR")"
-  curl -fsSL "https://services.gradle.org/distributions/gradle-8.13-wrapper.jar" -o "$JAR"
-  echo "b5ca811c057b3eb4164c78f4155d667c6092ff98ba91a4c90d29e127426f37a7  $JAR" | sha256sum -c -
+GRADLE_VERSION="8.13"
+GRADLE_HOME="${HOME}/.gradle/hunter-system/gradle-${GRADLE_VERSION}"
+ZIP_PATH="${HOME}/.gradle/hunter-system/gradle-${GRADLE_VERSION}-bin.zip"
+EXPECTED_SHA="993b4f33b652c689e9721917d8e021cab6bbd3eae81b39ab2fd46fdb19a928d5"
+
+if [ ! -x "${GRADLE_HOME}/bin/gradle" ]; then
+  mkdir -p "$(dirname "${ZIP_PATH}")"
+  curl -fL --retry 3 "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o "${ZIP_PATH}"
+  echo "${EXPECTED_SHA}  ${ZIP_PATH}" | sha256sum -c -
+  rm -rf "${GRADLE_HOME}"
+  unzip -q "${ZIP_PATH}" -d "$(dirname "${GRADLE_HOME}")"
 fi
-exec java -classpath "$JAR" org.gradle.wrapper.GradleWrapperMain "$@"
+
+exec "${GRADLE_HOME}/bin/gradle" "$@"
