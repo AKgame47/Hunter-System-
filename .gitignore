@@ -4,3 +4,11 @@ local.properties
 *.jks
 *.keystore
 .idea/
+.env
+**/.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+deployment/secrets/
+*.pem
+*.key
