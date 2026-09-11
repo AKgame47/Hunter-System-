@@ -19,8 +19,8 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import com.akgaming.huntersystem.camera.PoseAnalyzer
-import com.akgaming.huntersystem.camera.PoseFrame
+import com.akgaming.huntersystem.camera.*
+import com.google.mlkit.vision.pose.PoseLandmark
 import java.util.concurrent.Executors
 
 @Composable
@@ -29,25 +29,62 @@ fun CameraWorkoutScreen(onBack: () -> Unit) {
     var granted by remember { mutableStateOf(ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     var frame by remember { mutableStateOf<PoseFrame?>(null) }
+    var exercise by remember { mutableStateOf(ExerciseKind.SQUAT) }
+    var tracker by remember(exercise) { mutableStateOf(PoseTracker(exercise)) }
+    var tracking by remember { mutableStateOf(TrackingResult(0, "READY", "Move fully into frame", false)) }
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("POSE WORKOUT", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
-        if (!granted) {
-            Text("Camera is optional. Grant access for on-device pose guidance, or continue with manual completion.", modifier = Modifier.padding(16.dp))
-            Button(onClick = { launcher.launch(Manifest.permission.CAMERA) }, modifier = Modifier.padding(horizontal = 16.dp)) { Text("Allow camera") }
-        } else {
-            CameraPreview(frame = frame, onFrame = { frame = it }, modifier = Modifier.fillMaxWidth().weight(1f))
-            Text(if (frame?.points.isNullOrEmpty()) "No person detected — move fully into frame" else "Analyzing on device · ${frame!!.points.size} landmarks", modifier = Modifier.padding(horizontal = 16.dp))
+        Text("GYMORA AI FORM COACH", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(16.dp))
+        ScrollableTabRow(selectedTabIndex = exercise.ordinal) {
+            ExerciseKind.entries.forEach { kind ->
+                Tab(selected = exercise == kind, onClick = {
+                    exercise = kind
+                    tracker = PoseTracker(kind)
+                    tracking = TrackingResult(0, "READY", "Move fully into frame", false)
+                }, text = { Text(kind.name.replace('_', ' ')) })
+            }
         }
-        OutlinedButton(onClick = onBack, modifier = Modifier.padding(16.dp).fillMaxWidth()) { Text("Manual mode / Back") }
+        if (!granted) {
+            Text("Camera is optional. Grant access for on-device guidance, or continue with manual completion.", modifier = Modifier.padding(16.dp))
+            Button(onClick = { launcher.launch(Manifest.permission.CAMERA) }, modifier = Modifier.padding(horizontal = 16.dp)) { Text("ALLOW CAMERA") }
+        } else {
+            CameraPreview(frame = frame, onFrame = { newFrame ->
+                frame = newFrame
+                tracking = tracker.update(newFrame.toSample())
+            }, modifier = Modifier.fillMaxWidth().weight(1f))
+            Card(Modifier.padding(horizontal = 16.dp).fillMaxWidth()) {
+                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(if (exercise == ExerciseKind.PLANK) "${tracking.holdMillis / 1000}s" else "${tracking.reps} REPS", style = MaterialTheme.typography.headlineMedium)
+                    Text("${tracking.phase} · ${tracking.feedback}")
+                    Text(if (tracking.confident) "Tracking confidence accepted" else "Uncertain — no progress awarded", color = if (tracking.confident) Color(0xFF42E79C) else Color(0xFFFFB74D))
+                    Text("Pose processing stays on this device.", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+        OutlinedButton(onClick = onBack, modifier = Modifier.padding(16.dp).fillMaxWidth()) { Text("MANUAL MODE / BACK") }
     }
+}
+
+private fun PoseFrame.toSample(): PoseSample {
+    fun point(type: Int) = points.firstOrNull { it.type == type }?.let { JointPoint(it.x, it.y, it.confidence) }
+    val pairs = listOf(
+        Joint.LEFT_SHOULDER to PoseLandmark.LEFT_SHOULDER, Joint.RIGHT_SHOULDER to PoseLandmark.RIGHT_SHOULDER,
+        Joint.LEFT_ELBOW to PoseLandmark.LEFT_ELBOW, Joint.RIGHT_ELBOW to PoseLandmark.RIGHT_ELBOW,
+        Joint.LEFT_WRIST to PoseLandmark.LEFT_WRIST, Joint.RIGHT_WRIST to PoseLandmark.RIGHT_WRIST,
+        Joint.LEFT_HIP to PoseLandmark.LEFT_HIP, Joint.RIGHT_HIP to PoseLandmark.RIGHT_HIP,
+        Joint.LEFT_KNEE to PoseLandmark.LEFT_KNEE, Joint.RIGHT_KNEE to PoseLandmark.RIGHT_KNEE,
+        Joint.LEFT_ANKLE to PoseLandmark.LEFT_ANKLE, Joint.RIGHT_ANKLE to PoseLandmark.RIGHT_ANKLE,
+    )
+    return PoseSample(pairs.mapNotNull { (joint, type) -> point(type)?.let { joint to it } }.toMap(), android.os.SystemClock.elapsedRealtime())
 }
 
 @Composable
 private fun CameraPreview(frame: PoseFrame?, onFrame: (PoseFrame) -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val owner = LocalLifecycleOwner.current
+    val latestCallback by rememberUpdatedState(onFrame)
     val executor = remember { Executors.newSingleThreadExecutor() }
-    val analyzer = remember { PoseAnalyzer(onFrame) }
+    val analyzer = remember { PoseAnalyzer { latestCallback(it) } }
     var previewView by remember { mutableStateOf<PreviewView?>(null) }
     Box(modifier) {
         AndroidView(factory = { PreviewView(it).also { view -> view.scaleType = PreviewView.ScaleType.FILL_CENTER; previewView = view } }, modifier = Modifier.fillMaxSize())
@@ -59,16 +96,16 @@ private fun CameraPreview(frame: PoseFrame?, onFrame: (PoseFrame) -> Unit, modif
         }
     }
     DisposableEffect(owner, previewView) {
-        val providerFuture = ProcessCameraProvider.getInstance(context)
+        val future = ProcessCameraProvider.getInstance(context)
         val listener = Runnable {
-            val provider = providerFuture.get()
+            val provider = future.get()
             val preview = Preview.Builder().build().also { it.surfaceProvider = previewView?.surfaceProvider }
             val analysis = ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also { it.setAnalyzer(executor, analyzer) }
             provider.unbindAll()
             val selector = if (provider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) CameraSelector.DEFAULT_FRONT_CAMERA else CameraSelector.DEFAULT_BACK_CAMERA
             provider.bindToLifecycle(owner, selector, preview, analysis)
         }
-        providerFuture.addListener(listener, ContextCompat.getMainExecutor(context))
-        onDispose { runCatching { providerFuture.get().unbindAll() }; analyzer.close(); executor.shutdown() }
+        future.addListener(listener, ContextCompat.getMainExecutor(context))
+        onDispose { runCatching { future.get().unbindAll() }; analyzer.close(); executor.shutdown() }
     }
 }
