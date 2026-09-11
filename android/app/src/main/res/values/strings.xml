@@ -1,1 +1,4 @@
-<resources><string name="app_name">Hunter System</string></resources>
+<resources>
+    <string name="app_name">GYMORA</string>
+    <string name="brand_tagline">TRAIN · DISCIPLINE · EVOLVE</string>
+</resources>

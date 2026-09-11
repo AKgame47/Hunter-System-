@@ -1,3 +1,5 @@
 <resources>
-    <color name="launcher_background">#030815</color>
+    <color name="launcher_background">#020713</color>
+    <color name="gymora_blue">#36A9FF</color>
+    <color name="gymora_ice">#D9F2FF</color>
 </resources>
