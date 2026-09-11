@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Hunter System",
-    "slug": "hunter-system",
+    "slug": "hunter-system-",
     "version": "0.1.0",
     "android": {"package": "com.akgaming.huntersystem"},
     "extra": {"eas": {"projectId": "9aaa23fa-40d1-43c2-b3b0-c462f5170bb3"}}
