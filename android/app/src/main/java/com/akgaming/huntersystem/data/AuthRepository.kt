@@ -1,6 +1,7 @@
 package com.akgaming.huntersystem.data
 
 import com.akgaming.huntersystem.data.remote.SupabaseProvider
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 
 class AuthRepository {
