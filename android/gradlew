@@ -3,11 +3,11 @@ set -eu
 GRADLE_VERSION="8.13"
 GRADLE_HOME="${HOME}/.gradle/hunter-system/gradle-${GRADLE_VERSION}"
 ZIP_PATH="${HOME}/.gradle/hunter-system/gradle-${GRADLE_VERSION}-bin.zip"
-EXPECTED_SHA="993b4f33b652c689e9721917d8e021cab6bbd3eae81b39ab2fd46fdb19a928d5"
+EXPECTED_SHA="20f1b1176237254a6fc204d8434196fa11a4cfb387567519c61556e8710aed78"
 
 if [ ! -x "${GRADLE_HOME}/bin/gradle" ]; then
   mkdir -p "$(dirname "${ZIP_PATH}")"
-  curl -fL --retry 3 "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -o "${ZIP_PATH}"
+  curl -fL --retry 3 "{{https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}}}-bin.zip" -o "${ZIP_PATH}"
   echo "${EXPECTED_SHA}  ${ZIP_PATH}" | sha256sum -c -
   rm -rf "${GRADLE_HOME}"
   unzip -q "${ZIP_PATH}" -d "$(dirname "${GRADLE_HOME}")"
