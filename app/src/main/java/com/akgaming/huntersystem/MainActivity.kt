@@ -5,12 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.akgaming.huntersystem.ui.HunterApp
-import com.akgaming.huntersystem.ui.theme.HunterTheme
+import com.akgaming.huntersystem.ui.theme.GymoraTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        setContent { HunterTheme { HunterApp() } }
+        setContent { GymoraTheme { HunterApp() } }
     }
 }
