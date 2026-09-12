@@ -13,6 +13,8 @@ import io.github.jan.supabase.postgrest.decodeSingle
 import io.github.jan.supabase.postgrest.from
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 sealed interface CloudSyncState {
     data object LocalOnly : CloudSyncState
@@ -81,7 +83,7 @@ object SupabaseGateway {
         supabase.auth.signUpWith(Email) {
             this.email = email.trim()
             this.password = password
-            data = kotlinx.serialization.json.buildJsonObject {
+            data = buildJsonObject {
                 put("hunter_name", hunterName.trim())
                 put("display_name", hunterName.trim())
             }
