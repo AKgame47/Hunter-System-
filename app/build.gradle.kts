@@ -14,7 +14,8 @@ val supabasePublishableKey = providers.gradleProperty("supabase.publishableKey")
     .orElse("")
     .get()
 
-fun String.asBuildConfigString(): String = "\\\"${replace("\\", "\\\\").replace("\\\"", "\\\\\"")}\\\""
+fun String.asBuildConfigString(): String =
+    "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
 android {
     namespace = "com.akgaming.huntersystem"
