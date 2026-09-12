@@ -53,7 +53,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.akgaming.huntersystem.data.CloudSyncState
 import com.akgaming.huntersystem.data.SupabaseGateway
-import com.akgaming.huntersystem.domain.Hunter
 import com.akgaming.huntersystem.ui.theme.Danger
 import com.akgaming.huntersystem.ui.theme.Energy
 import com.akgaming.huntersystem.ui.theme.EnergySoft
@@ -117,7 +116,12 @@ fun HunterApp(vm: HunterViewModel = viewModel()) {
 
 @Composable private fun BottomBar(current: String?, nav: NavHostController) = NavigationBar(containerColor = Color(0xFF030A18)) {
     listOf(Route.HOME, Route.QUEST, Route.TRAIN, Route.RANK, Route.MENU).forEach { route ->
-        NavigationBarItem(current == route.path, { nav.navigate(route.path) { launchSingleTop = true } }, { Text(route.glyph, fontSize = 18.sp, fontWeight = FontWeight.Black) }, { Text(route.label, fontSize = 10.sp) })
+        NavigationBarItem(
+            selected = current == route.path,
+            onClick = { nav.navigate(route.path) { launchSingleTop = true } },
+            icon = { Text(route.glyph, fontSize = 18.sp, fontWeight = FontWeight.Black) },
+            label = { Text(route.label, fontSize = 10.sp) },
+        )
     }
 }
 
@@ -143,7 +147,12 @@ fun HunterApp(vm: HunterViewModel = viewModel()) {
     colors = ButtonDefaults.buttonColors(containerColor = if (secondary) Raised else Energy, contentColor = if (secondary) HunterText else Night), shape = RoundedCornerShape(10.dp),
 ) { Text(value, fontWeight = FontWeight.Black) }
 
-@Composable private fun XpBar(value: Float) = LinearProgressIndicator({ value.coerceIn(0f, 1f) }, Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(8.dp)), EnergySoft, Color(0xFF13253F))
+@Composable private fun XpBar(value: Float) = LinearProgressIndicator(
+    progress = { value.coerceIn(0f, 1f) },
+    modifier = Modifier.fillMaxWidth().height(10.dp).clip(RoundedCornerShape(8.dp)),
+    color = EnergySoft,
+    trackColor = Color(0xFF13253F),
+)
 
 @Composable private fun Home(vm: HunterViewModel, nav: NavHostController) = Backdrop {
     val h = vm.hunter
@@ -157,7 +166,8 @@ fun HunterApp(vm: HunterViewModel = viewModel()) {
     Label("CLOUD SYNC", if (SupabaseGateway.configured) Energy else Warning)
     val text = when (val state = vm.cloudState) { CloudSyncState.LocalOnly -> if (SupabaseGateway.configured) "Supabase is configured. Sign in to sync across devices." else "Local-only mode. Add Supabase build properties to enable sync."; CloudSyncState.Syncing -> "Syncing your hunter profile…"; is CloudSyncState.Synced -> state.message; is CloudSyncState.Error -> state.message }
     Text(text, color = Muted, lineHeight = 21.sp)
-    Row(Modifier.fillMaxWidth(), Arrangement.spacedBy(8.dp)) { EnergyButton("ACCOUNT", { nav.navigate(Route.ACCOUNT.path) }, secondary = true); EnergyButton("SYNC", vm::syncToCloud) }
+    EnergyButton("ACCOUNT", { nav.navigate(Route.ACCOUNT.path) }, secondary = true)
+    EnergyButton("SYNC", vm::syncToCloud)
 }
 
 @Composable private fun Workout(vm: HunterViewModel, nav: NavHostController) = Backdrop {
@@ -171,28 +181,22 @@ fun HunterApp(vm: HunterViewModel = viewModel()) {
 
 @Composable private fun Training(nav: NavHostController) = ListScreen("TRAINING LIBRARY", nav, listOf("Bodyweight Squat · beginner", "Push-up · beginner", "Forearm Plank · timed", "Reverse Lunge · beginner"))
 @Composable private fun Leaderboard(nav: NavHostController) = ListScreen("WEEKLY LEADERBOARD", nav, listOf("#1 Shadow Monarch · 98,420 XP", "#2 Iron Wolf · 96,810 XP", "#3 Nightfall · 94,230 XP", "#4 You · 91,540 XP"))
-
 @Composable private fun ListScreen(title: String, nav: NavHostController, items: List<String>) = Backdrop { Header(title, nav); items.forEach { item -> SystemCard { Text(item, color = HunterText, fontSize = 18.sp, fontWeight = FontWeight.Black); Text("Safety and verification details appear before training.", color = Muted, fontSize = 12.sp) } } }
-
 @Composable private fun Menu(nav: NavHostController) = Backdrop { Label("SYSTEM MENU"); Text("GYMORA", color = HunterText, fontSize = 30.sp, fontWeight = FontWeight.Black); Text("Hunter System controls and progress", color = Muted); listOf(Route.PROFILE, Route.ACHIEVEMENTS, Route.STATISTICS, Route.COACH, Route.RESTRICTIONS, Route.LEAVE, Route.SETTINGS, Route.ACCOUNT, Route.DEVELOPER, Route.ABOUT).forEach { r -> MenuRow(r.label, r.glyph) { nav.navigate(r.path) } } }
-
 @Composable private fun MenuRow(label: String, glyph: String, onClick: () -> Unit) = Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Raised).clickable(onClick = onClick).padding(16.dp), Alignment.CenterVertically) { Text(glyph, color = EnergySoft, fontSize = 22.sp, modifier = Modifier.width(36.dp)); Text(label, color = HunterText, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); Text("›", color = Muted, fontSize = 24.sp) }
-
 @Composable private fun Profile(vm: HunterViewModel, nav: NavHostController) = Backdrop { Header("HUNTER PROFILE", nav); SystemCard { Label("SHADOW HUNTER"); Text("${vm.hunter.rank}-RANK · LEVEL ${vm.hunter.level}", color = HunterText, fontSize = 24.sp, fontWeight = FontWeight.Black); XpBar(vm.hunter.xp / 500f); Text("${vm.hunter.xp} / 500 XP", color = Muted) }; SystemCard { Label("RPG ATTRIBUTES"); Stat("STR", "31"); Stat("VIT", "27"); Stat("END", "29"); Stat("AGI", "22") }; SystemCard { Label("REAL FITNESS"); Stat("Completed quests", vm.hunter.completedQuests.toString()); Stat("Current streak", "${vm.hunter.streak} days"); Stat("Mode", "Guided/manual") } }
 @Composable private fun Stat(name: String, value: String) = Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) { Text(name, color = Muted); Text(value, color = HunterText, fontWeight = FontWeight.Black) }
-
 @Composable private fun Achievements(nav: NavHostController) = ListScreen("ACHIEVEMENTS", nav, listOf("★ First Step · Complete your first workout", "★ 7 Day Streak · Maintain consistency", "★ Discipline Master · Complete 30 workouts", "☆ Early Riser · Start before 7 AM", "☆ Shadow Rank · Reach A rank"))
 @Composable private fun Statistics(vm: HunterViewModel, nav: NavHostController) = Backdrop { Header("STATISTICS", nav); SystemCard { Label("TRAINING OVERVIEW"); Stat("Workout days", vm.hunter.completedQuests.toString()); Stat("Current streak", "${vm.hunter.streak} days"); Stat("Average session", "18:24"); Stat("Form mode", "Guided/manual") }; SystemCard { Label("MUSCLE FOCUS"); Stat("Chest", "32%"); Stat("Legs", "28%"); Stat("Core", "22%"); Stat("Back", "18%") } }
 @Composable private fun Coach(nav: NavHostController) = ListScreen("AI COACH", nav, listOf("How can I help you today?", "Suggest tomorrow's workout", "I'm feeling sore", "Adjust my plan", "Explain this exercise"))
 @Composable private fun Restrictions(nav: NavHostController) = Backdrop { Header("APP RESTRICTIONS", nav); SystemCard { Label("CAPABILITY NOTICE", Warning); Text("Android app blocking is device-, permission-, and Play-policy-dependent. This build does not silently block applications.", color = HunterText, lineHeight = 23.sp); Text("A compliant adapter and emergency bypass must be validated before enablement.", color = Muted) }; listOf("Instagram", "YouTube", "TikTok", "Games", "Browser").forEach { SettingRow(it, false) } }
 @Composable private fun Leave(nav: NavHostController) = Backdrop { Header("LEAVE / RECOVERY", nav); SystemCard { Label("RECOVERY FIRST"); Text("Never train through illness or injury to protect a streak.", color = HunterText); Text("Leave requests will pause requirements without deleting account data.", color = Muted) }; listOf("Vacation", "Travel", "Exams / Studies", "Work", "Recovery", "Unwell").forEach { SettingRow(it, false) } }
-
 @Composable private fun Settings(nav: NavHostController) { var reducedMotion by rememberSaveable { mutableStateOf(false) }; var notifications by rememberSaveable { mutableStateOf(true) }; Backdrop { Header("SETTINGS", nav); MenuRow("Cloud account", "☁") { nav.navigate(Route.ACCOUNT.path) }; SettingRow("Notifications", notifications) { notifications = it }; SettingRow("Reduced motion", reducedMotion) { reducedMotion = it }; MenuRow("Privacy and data", "◈") {}; MenuRow("Permissions", "◉") {}; SystemCard { Label("ACCOUNT"); Text("Use Cloud account to sign in with Supabase or continue locally as a guest.", color = Muted) } } }
-@Composable private fun SettingRow(label: String, enabled: Boolean, onChange: (Boolean) -> Unit = {}) = Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Raised).padding(16.dp), Alignment.CenterVertically) { Text(label, color = HunterText, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); Switch(enabled, onChange) }
+@Composable private fun SettingRow(label: String, enabled: Boolean, onChange: (Boolean) -> Unit = {}) = Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Raised).padding(16.dp), Alignment.CenterVertically) { Text(label, color = HunterText, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f)); Switch(checked = enabled, onCheckedChange = onChange) }
 
 @Composable private fun Account(vm: HunterViewModel, nav: NavHostController) {
     var email by rememberSaveable { mutableStateOf("") }; var password by rememberSaveable { mutableStateOf("") }; var hunterName by rememberSaveable { mutableStateOf("Shadow Hunter") }; var create by rememberSaveable { mutableStateOf(false) }
-    Backdrop { Header("CLOUD ACCOUNT", nav); SystemCard { Label("SUPABASE AUTH", if (SupabaseGateway.configured) Energy else Warning); Text(if (SupabaseGateway.configured) "Use your Supabase account to sync GYMORA across devices." else "Add supabase.url and supabase.publishableKey Gradle properties to enable this screen.", color = Muted, lineHeight = 22.sp); OutlinedTextField(email, { email = it }, Modifier.fillMaxWidth(), label = { Text("Email") }, singleLine = true); OutlinedTextField(password, { password = it }, Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true); if (create) OutlinedTextField(hunterName, { hunterName = it }, Modifier.fillMaxWidth(), label = { Text("Hunter name") }, singleLine = true); EnergyButton(if (create) "CREATE ACCOUNT" else "SIGN IN") { if (create) vm.signUp(email, password, hunterName) else vm.signIn(email, password) }; TextButtonLike(if (create) "Already have an account? Sign in" else "New hunter? Create an account") { create = !create } }
+    Backdrop { Header("CLOUD ACCOUNT", nav); SystemCard { Label("SUPABASE AUTH", if (SupabaseGateway.configured) Energy else Warning); Text(if (SupabaseGateway.configured) "Use your Supabase account to sync GYMORA across devices." else "Add supabase.url and supabase.publishableKey Gradle properties to enable this screen.", color = Muted, lineHeight = 22.sp); OutlinedTextField(value = email, onValueChange = { email = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Email") }, singleLine = true); OutlinedTextField(value = password, onValueChange = { password = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Password") }, singleLine = true); if (create) OutlinedTextField(value = hunterName, onValueChange = { hunterName = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Hunter name") }, singleLine = true); EnergyButton(if (create) "CREATE ACCOUNT" else "SIGN IN") { if (create) vm.signUp(email, password, hunterName) else vm.signIn(email, password) }; TextButtonLike(if (create) "Already have an account? Sign in" else "New hunter? Create an account") { create = !create } }
     when (val state = vm.cloudState) { CloudSyncState.LocalOnly -> Text("Local mode", color = Muted); CloudSyncState.Syncing -> Text("Contacting Supabase…", color = EnergySoft); is CloudSyncState.Synced -> Text(state.message, color = Success); is CloudSyncState.Error -> Text(state.message, color = Danger) }
     if (SupabaseGateway.isAuthenticated()) EnergyButton("SIGN OUT", vm::signOut, secondary = true)
 }
