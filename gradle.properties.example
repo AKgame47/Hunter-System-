@@ -1,0 +1,3 @@
+# Copy into gradle.properties for local builds, or use environment variables.
+supabase.url=https://fmrszokykwvgknnaeqmk.supabase.co
+supabase.publishableKey=REPLACE_WITH_YOUR_SUPABASE_PUBLISHABLE_KEY
